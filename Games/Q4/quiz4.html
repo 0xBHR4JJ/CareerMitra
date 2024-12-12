@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Science Memory Card Match Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            gap: 10px;
+        }
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: #e0e0e0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 14px;
+            border: 2px solid #ccc;
+            user-select: none;
+            text-align: center;
+            line-height: 1.2;
+        }
+        .hidden {
+            background-color: #616161;
+            color: #616161;
+        }
+        .matched {
+            background-color: #b2ff59;
+            cursor: default;
+        }
+        .matched-pairs {
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+        }
+        .next-button {
+            display: none;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            margin-top: 20px;
+        }
+        .next-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-board" id="gameBoard">
+    <!-- Cards will be generated here -->
+</div>
+<div class="matched-pairs" id="matchedPairs">
+    <!-- Matched pairs' IDs will be displayed here -->
+</div>
+
+<!-- Timer -->
+<h2 id="timer">Time Remaining: 30 seconds</h2>
+
+<!-- Next Button -->
+<button class="next-button" id="nextButton">Next</button>
+
+<script>
+    const questionApiUrl = "http://192.168.111.99:8000/app/questions/topic/5/";
+    const submitApiUrl = "http://192.168.111.99:8000/app/responses/";
+
+    const gameBoard = document.getElementById('gameBoard');
+    const matchedPairsDiv = document.getElementById('matchedPairs');
+    const timerDisplay = document.getElementById('timer');
+    const nextButton = document.getElementById('nextButton');
+
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let matchedPairs = [];  // Array to store matched pair IDs
+    let gameOver = false;   // Track game status
+    let allMatched = false; // Track whether all pairs are matched
+    let timeLeft = 30;      // Timer countdown
+
+    // Timer countdown
+    const timer = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time Remaining: ${timeLeft} seconds`;
+
+        if (timeLeft === 0) {
+            clearInterval(timer);
+            endGame(false);  // If time runs out, game ends with "false"
+        }
+    }, 1000);
+
+    // List of matching pairs for social science topics (India) with IDs
+    const cards = [
+        { id: 1, name: "Mahatma Gandhi", pair: "Non-Violence Movement" },
+        { id: 1, name: "Non-Violence Movement", pair: "Mahatma Gandhi" },
+        { id: 2, name: "Constitution of India", pair: "Dr. B.R. Ambedkar" },
+        { id: 2, name: "Dr. B.R. Ambedkar", pair: "Constitution of India" },
+        { id: 3, name: "Green Revolution", pair: "M.S. Swaminathan" },
+        { id: 3, name: "M.S. Swaminathan", pair: "Green Revolution" },
+        { id: 4, name: "Independence Day", pair: "15 August 1947" },
+        { id: 4, name: "15 August 1947", pair: "Independence Day" }
+    ];
+
+    // Duplicate the cards and shuffle them
+    const gameCards = [...cards].sort(() => 0.5 - Math.random());
+
+    // Function to create the cards
+    function createCard(card) {
+        const cardElement = document.createElement('div');
+        cardElement.classList.add('card');
+        cardElement.dataset.name = card.name;
+        cardElement.dataset.id = card.id; // Store the pair ID on the card
+        cardElement.textContent = card.name;
+        cardElement.addEventListener('click', flipCard);
+        gameBoard.appendChild(cardElement);
+    }
+
+    // Initialize the game board
+    gameCards.forEach(createCard);
+
+    // Show all cards for 5 seconds, then hide them
+    setTimeout(() => {
+        document.querySelectorAll('.card').forEach(card => {
+            card.classList.add('hidden');
+        });
+    }, 5000);  // Hide the cards after 5 seconds
+
+    // Function to flip a card
+    function flipCard() {
+        if (lockBoard || this === firstCard || !this.classList.contains('hidden') || gameOver) return;
+
+        this.classList.remove('hidden');
+
+        if (!firstCard) {
+            firstCard = this;
+            return;
+        }
+
+        secondCard = this;
+        checkForMatch();
+    }
+
+    // Function to check for a match
+    function checkForMatch() {
+        const isMatch = firstCard.dataset.name === secondCard.dataset.name ||
+                        firstCard.dataset.name === gameCards.find(c => c.pair === secondCard.dataset.name)?.name;
+
+        if (isMatch) {
+            const pairID = firstCard.dataset.id;  // Get the ID of the matched pair
+            if (!matchedPairs.includes(pairID)) {
+                matchedPairs.push(pairID);  // Add the ID to matched pairs array
+                displayMatchedPair(pairID); // Display the matched pair ID
+            }
+            disableCards();
+            if (matchedPairs.length === cards.length / 2) {
+                clearInterval(timer);  // Stop the timer
+                allMatched = true;     // All pairs are matched
+                endGame(true);         // Submit true if all matched
+            }
+        } else {
+            unflipCards();
+        }
+    }
+
+    // Disable the matched cards
+    function disableCards() {
+        firstCard.classList.add('matched');
+        secondCard.classList.add('matched');
+        resetBoard();
+    }
+
+    // Unflip the cards if not matched
+    function unflipCards() {
+        lockBoard = true;
+        setTimeout(() => {
+            firstCard.classList.add('hidden');
+            secondCard.classList.add('hidden');
+            resetBoard();
+        }, 1000);
+    }
+
+    // Reset the board after each round
+    function resetBoard() {
+        [firstCard, secondCard] = [null, null];
+        lockBoard = false;
+    }
+
+    // Function to display the matched pair ID on the screen
+    function displayMatchedPair(id) {
+        const matchText = `Matched Pair ID: ${id}`;
+        const matchDiv = document.createElement('div');
+        matchDiv.textContent = matchText;
+        matchedPairsDiv.appendChild(matchDiv);
+    }
+
+    // Fetch question data
+    async function fetchQuestion() {
+        try {
+            const response = await fetch(questionApiUrl);
+            const data = await response.json();
+            const question = data.find(q => q.id === 22);  // Find the question with id 22
+            if (!question) {
+                console.error("Question not found");
+            }
+        } catch (error) {
+            console.error("Error fetching question:", error);
+        }
+    }
+
+    // End the game
+    function endGame(success) {
+        gameOver = true;
+        submitAnswer(8, 22, success);  // Submit the answer
+        nextButton.style.display = 'inline-block';  // Show the next button
+    }
+
+    // Submit the answer via POST request
+    async function submitAnswer(studentId, questionId, answer) {
+        const data = {
+            student: studentId,
+            question: questionId,
+            answer: answer.toString()  // Convert boolean to string
+        };
+
+        try {
+            const response = await fetch(submitApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                console.log("Answer submitted successfully");
+            } else {
+                console.error("Error submitting answer");
+            }
+        } catch (error) {
+            console.error("Error submitting answer:", error);
+        }
+    }
+
+    // Initialize the game and fetch question data
+    fetchQuestion();
+
+    // Next button action
+    nextButton.addEventListener('click', () => {
+        window.location.href = "../Q6/quiz6.html";  // Redirect to the next page or quiz
+    });
+
+</script>
+
+</body>
+</html>

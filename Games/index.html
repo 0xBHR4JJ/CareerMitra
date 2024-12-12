@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Index</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
+            letter-spacing: 1.2px;
+            animation: slideDown 0.6s ease-in-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .quiz-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .quiz-item {
+            margin: 20px 0;
+            animation: fadeUp 1s ease-in-out;
+        }
+
+        @keyframes fadeUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .quiz-button {
+            padding: 15px 30px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 16px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-decoration: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease-in-out;
+            display: inline-block;
+            width: 240px;
+        }
+
+        .quiz-button:hover {
+            background-color: #45a049;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .quiz-button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Choose Your Quiz</h1>
+
+    <ul class="quiz-list">
+        <!-- Field Memory Card Match Quiz -->
+        <li class="quiz-item">
+            <a href="Q4/quiz4.html" class="quiz-button">Match the Cards</a>
+        </li>
+        
+        <!-- Field Jeopardy Quiz -->
+        <li class="quiz-item">
+            <a href="Q5/quiz5.html" class="quiz-button">Field Jeopardy!</a>
+        </li>
+
+        <!-- Arrange the Steps Quiz -->
+        <li class="quiz-item">
+            <a href="Q6/quiz6.html" class="quiz-button">Arrange the Steps</a>
+        </li>
+
+        <li class="quiz-item"></li>
+            <a href="Q3\vaibhav\quiz3.html" class="quiz-button">Scenario Based</a>
+        </li>
+    </ul>
+
+</body>
+</html>

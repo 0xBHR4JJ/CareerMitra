@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Role-Play Simulation Game</title>
+    <style>
+        body { margin: 0; }
+        #game-container { width: 100vw; height: 100vh; }
+        .ui { position: absolute; top: 10px; left: 10px; color: white; }
+    </style>
+</head>
+<body>
+    <div id="game-container"></div>
+    <div class="ui">
+        <button onclick="setRole('doctor')">Play as Doctor</button>
+        <button onclick="setRole('engineer')">Play as Engineer</button>
+        <button onclick="setRole('businessman')">Play as Businessman</button>
+        <button onclick="setRole('socialworker')">Play as Social Worker</button>
+        <p id="role">Select a role to start playing!</p>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>

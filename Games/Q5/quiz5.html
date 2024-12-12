@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Field Jeopardy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-gap: 10px;
+            padding: 20px;
+            justify-items: center;
+        }
+
+        .grid-item {
+            background-color: #4CAF50;
+            color: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100px;
+            text-align: center;
+        }
+
+        .grid-item.disabled {
+            background-color: grey;
+            pointer-events: none;
+        }
+
+        .question-container {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #fff;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .question-container h2 {
+            margin-top: 0;
+        }
+
+        .question-container .options-container {
+            margin-top: 10px;
+            text-align: left;
+        }
+
+        .question-container .submit-button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .question-container .close-button {
+            background-color: #f44336;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .options-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .options-container input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Field Jeopardy</h1>
+
+<div class="grid-container" id="quizGrid">
+    <!-- Grid items will be generated here dynamically -->
+</div>
+
+<div class="question-container" id="questionContainer">
+    <h2 id="questionText"></h2>
+    <div class="options-container" id="optionsContainer"></div>
+    <button class="submit-button" id="submitAnswer">Submit</button>
+    <button class="close-button" id="closePopup">Close</button>
+</div>
+
+<script>
+// Base URL to fetch questions
+const baseURL = "http://192.168.111.99:8000/app/questions/topic/";
+
+// Function to fetch and initialize the quiz for a specific topic ID
+async function fetchAndInitialize(topicId, startBlock) {
+    const url = `${baseURL}${topicId}`;
+    
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data && data.length > 0) {
+            initializeQuiz(data, startBlock);
+        } else {
+            console.error(`No data found for topic ${topicId}`);
+        }
+    } catch (error) {
+        console.error(`Error fetching topics for topic ${topicId}:`, error);
+    }
+}
+
+// Function to initialize the quiz with data
+function initializeQuiz(data, startBlock) {
+    const quizGrid = document.getElementById('quizGrid');
+
+    data.forEach((questionData, index) => {
+        const blockNumber = startBlock + index;
+
+        const gridItem = document.createElement('div');
+        gridItem.classList.add('grid-item');
+        gridItem.innerText = `Block ${blockNumber}`;
+        gridItem.setAttribute('data-question-id', questionData.id);
+        gridItem.setAttribute('data-question-text', questionData.text);
+        gridItem.setAttribute('data-options', JSON.stringify(questionData.options));
+
+        gridItem.addEventListener('click', () => {
+            displayQuestion(gridItem);
+        });
+
+        quizGrid.appendChild(gridItem);
+    });
+
+    // If less than 5 questions are returned, disable remaining blocks
+    for (let i = data.length; i < 5; i++) {
+        const blockNumber = startBlock + i;
+
+        const gridItem = document.createElement('div');
+        gridItem.classList.add('grid-item', 'disabled');
+        gridItem.innerText = `Block ${blockNumber}`;
+        quizGrid.appendChild(gridItem);
+    }
+}
+
+// Function to display question and options in a popup
+function displayQuestion(block) {
+    const questionText = block.getAttribute('data-question-text');
+    const options = JSON.parse(block.getAttribute('data-options'));
+
+    const questionContainer = document.getElementById('questionContainer');
+    const questionTextElement = document.getElementById('questionText');
+    const optionsContainer = document.getElementById('optionsContainer');
+    const submitButton = document.getElementById('submitAnswer');
+
+    // Clear previous options
+    optionsContainer.innerHTML = '';
+
+    // Display question text
+    questionTextElement.innerText = questionText;
+
+    // Create radio buttons for each option
+    options.forEach((option, index) => {
+        const label = document.createElement('label');
+        label.innerHTML = `
+            <input type="radio" name="answer" value="${option}" id="option${index}"> ${option}
+        `;
+        optionsContainer.appendChild(label);
+    });
+
+    // Show the question container
+    questionContainer.style.display = 'block';
+
+    // Handle close popup
+    document.getElementById('closePopup').onclick = function () {
+        questionContainer.style.display = 'none';
+    };
+
+    // Handle submit answer
+    submitButton.onclick = function () {
+        const selectedOption = document.querySelector('input[name="answer"]:checked');
+        if (selectedOption) {
+            const answer = selectedOption.value;
+            const questionId = block.getAttribute('data-question-id');
+            submitAnswer(2, questionId, answer);  // Student ID is 2 for now
+            block.classList.add('disabled');  // Change block color to grey
+            questionContainer.style.display = 'none';  // Hide popup
+        } else {
+            alert("Please select an answer.");
+        }
+    };
+}
+
+// Function to submit the answer via POST request
+async function submitAnswer(studentId, questionId, answer) {
+    const url = "http://192.168.111.99:8000/app/responses/";
+    const data = {
+        student: studentId,
+        question: questionId,
+        answer: answer
+    };
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Response submitted:", result);
+    } catch (error) {
+        console.error("Error submitting answer:", error);
+    }
+}
+
+// Fetch questions for topics 1 to 4 and assign them to blocks
+for (let topicId = 1; topicId <= 4; topicId++) {
+    const startBlock = (topicId - 1) * 5 + 1;  // Determines the block number range for each topic
+    fetchAndInitialize(topicId, startBlock);
+}
+</script>
+
+</body>
+</html>

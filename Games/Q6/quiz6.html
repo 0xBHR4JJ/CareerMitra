@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrange the Steps Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+        .game-container {
+            width: 400px;
+            text-align: center;
+        }
+        .game-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .step-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .step-item {
+            background-color: #f0f0f0;
+            margin: 5px 0;
+            padding: 10px;
+            border: 1px solid #ccc;
+            cursor: grab;
+        }
+        .step-item.dragging {
+            opacity: 0.5;
+            background-color: #ccc;
+        }
+        .submit-btn {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .submit-btn:disabled {
+            background-color: #9e9e9e;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        #timer {
+            margin-top: 10px;
+            font-size: 18px;
+            color: red;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <div class="game-title">Arrange the Steps in the Correct Order</div>
+    <ul class="step-list" id="stepList">
+        <!-- Steps will be dynamically generated here -->
+    </ul>
+    <div id="timer">Time Remaining: 30 seconds</div>
+    <button class="submit-btn" id="submitOrder">Submit Order</button>
+    <div class="result" id="result"></div>
+</div>
+
+<script>
+    // Steps (example: India's independence timeline)
+    const steps = [
+        "Salt March (1930)",
+        "Formation of Indian National Congress (1885)",
+        "Jallianwala Bagh Massacre (1919)",
+        "Quit India Movement (1942)",
+        "Independence of India (1947)"
+    ];
+
+    // The correct order for comparison
+    const correctOrder = [
+        "Formation of Indian National Congress (1885)",
+        "Jallianwala Bagh Massacre (1919)",
+        "Salt March (1930)",
+        "Quit India Movement (1942)",
+        "Independence of India (1947)"
+    ];
+
+    const stepList = document.getElementById('stepList');
+    const resultDiv = document.getElementById('result');
+    const timerDisplay = document.getElementById('timer');
+    const submitButton = document.getElementById('submitOrder');
+
+    let timer;
+    let timeLeft = 30;
+    let gameOver = false; // Track whether the game is over
+
+    // API details
+    const submitApiUrl = "http://192.168.111.99:8000/app/responses/";
+
+    // Start timer
+    function startTimer() {
+        timer = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = `Time Remaining: ${timeLeft} seconds`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                endGame(false);  // Time's up, game ends with "false"
+            }
+        }, 1000);
+    }
+
+    // Shuffle steps for initial random display
+    function shuffle(array) {
+        return array.sort(() => Math.random() - 0.5);
+    }
+
+    // Create and display steps as draggable list items
+    function displaySteps() {
+        const shuffledSteps = shuffle([...steps]);
+
+        shuffledSteps.forEach(step => {
+            const li = document.createElement('li');
+            li.textContent = step;
+            li.classList.add('step-item');
+            li.setAttribute('draggable', 'true');
+            stepList.appendChild(li);
+        });
+
+        addDragAndDropHandlers();
+    }
+
+    // Drag-and-drop functionality
+    function addDragAndDropHandlers() {
+        let draggingItem = null;
+
+        document.querySelectorAll('.step-item').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                draggingItem = item;
+                setTimeout(() => item.classList.add('dragging'), 0);
+            });
+
+            item.addEventListener('dragend', () => {
+                draggingItem.classList.remove('dragging');
+                draggingItem = null;
+            });
+
+            item.addEventListener('dragover', event => {
+                event.preventDefault();
+                const draggingOverItem = event.target;
+                if (draggingOverItem !== draggingItem) {
+                    stepList.insertBefore(draggingItem, draggingOverItem.nextSibling);
+                }
+            });
+        });
+    }
+
+    // Check the order of the steps
+    function checkOrder() {
+        const currentOrder = Array.from(document.querySelectorAll('.step-item')).map(item => item.textContent);
+        const isCorrect = currentOrder.every((step, index) => step === correctOrder[index]);
+
+        if (isCorrect) {
+            resultDiv.textContent = "Correct! You've arranged the steps in the right order.";
+            resultDiv.style.color = "green";
+            endGame(true); // If correct, send true
+        } else {
+            resultDiv.textContent = "You Lose!";
+            resultDiv.style.color = "red";
+            endGame(false); // If incorrect, send false
+        }
+    }
+
+    // End the game and submit the result
+    function endGame(isCorrect) {
+        gameOver = true;
+        submitButton.disabled = true;  // Disable submit button
+        clearInterval(timer);  // Stop the timer
+        submitAnswer(8, 23, isCorrect); // Submit answer (true or false)
+    }
+
+    // Submit the answer via POST request
+    async function submitAnswer(studentId, questionId, answer) {
+        const data = {
+            student: studentId,
+            question: questionId,
+            answer: answer.toString() // Convert boolean to string
+        };
+
+        try {
+            const response = await fetch(submitApiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            if (response.ok) {
+                console.log("Answer submitted successfully");
+            } else {
+                console.error("Error submitting answer");
+            }
+        } catch (error) {
+            console.error("Error submitting answer:", error);
+        }
+    }
+
+    // Initialize the game
+    displaySteps();
+    startTimer();  // Start the timer when the game starts
+
+    // Check order on submit
+    submitButton.addEventListener('click', () => {
+        if (!gameOver) checkOrder();
+    });
+</script>
+
+</body>
+</html>
